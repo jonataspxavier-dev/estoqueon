@@ -20,6 +20,6 @@ services:
       - key: SEED_ON_START
         value: "true"
       - key: CORS_ORIGIN
-        value: https://estoqueon.vercel.app
+        value: https://estoqueon-two.vercel.app
       - key: LOG_LEVEL
         value: info
