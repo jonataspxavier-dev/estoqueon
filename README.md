@@ -4,6 +4,9 @@ API REST completa para controle de estoque e vendas de pequenos comércios, com 
 Alertas de estoque baixo, relatórios de faturamento e lucro bruto, exportação em CSV, autenticação JWT com perfis,
 testes automatizados e documentação Swagger.
 
+**Demo online:** [estoqueon-two.vercel.app](https://estoqueon-two.vercel.app) · **Swagger:** [estoqueon-api.onrender.com/docs](https://estoqueon-api.onrender.com/docs)
+(login `gerente@estoqueon.com` / `gerente123` — a API gratuita "dorme" sem uso; o primeiro acesso pode levar ~50 s)
+
 ![Dashboard](docs/screenshots/dashboard.jpg)
 
 ## Stack
