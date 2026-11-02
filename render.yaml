@@ -1,0 +1,25 @@
+# Blueprint do Render: cria a API (Docker, plano gratuito) a partir deste repositório.
+services:
+  - type: web
+    name: estoqueon-api
+    runtime: docker
+    plan: free
+    dockerContext: ./api
+    dockerfilePath: ./api/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false # informado no painel do Render (contém a senha do banco)
+      - key: JWT_SECRET
+        generateValue: true # o Render gera um segredo aleatório
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: SEED_ON_START
+        value: "true"
+      - key: CORS_ORIGIN
+        value: https://estoqueon.vercel.app
+      - key: LOG_LEVEL
+        value: info

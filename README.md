@@ -178,8 +178,8 @@ Combinação sem custo: **Aiven** (MySQL) + **Render** (API em Docker) + **Verce
 
 1. **Banco — Aiven for MySQL (plano Free)**
    - Crie um serviço MySQL em [aiven.io](https://aiven.io) e copie a *Service URI*.
-   - Monte o `DATABASE_URL`: `mysql://USUARIO:SENHA@HOST:PORTA/defaultdb?sslaccept=strict`.
-2. **API — Render (Web Service gratuito)**
+   - Monte o `DATABASE_URL`: `mysql://USUARIO:SENHA@HOST:PORTA/defaultdb?sslaccept=accept_invalid_certs` (a Aiven usa um certificado próprio).
+2. **API — Render (Web Service gratuito)** — o `render.yaml` na raiz já descreve o serviço (*New → Blueprint*)
    - Suba o projeto para o GitHub. Em [render.com](https://render.com): *New → Web Service* → selecione o repositório.
    - *Root Directory*: `api` · *Runtime*: Docker · *Health Check Path*: `/health`.
    - Variáveis: `DATABASE_URL`, `JWT_SECRET` (texto longo aleatório), `NODE_ENV=production`, `SEED_ON_START=true`,
