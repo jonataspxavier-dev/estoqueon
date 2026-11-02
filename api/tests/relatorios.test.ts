@@ -1,7 +1,8 @@
+import { diaLocal } from '../src/utils/http';
 import { api, prepararBanco, prisma, type Contexto } from './helpers';
 
 let ctx: Contexto;
-const hoje = new Date().toISOString().slice(0, 10);
+const hoje = diaLocal();
 
 beforeAll(async () => {
   ctx = await prepararBanco();
@@ -121,5 +122,58 @@ describe('GET /alertas/estoque-baixo', () => {
     await prisma.produto.update({ where: { id: ctx.detergente.id }, data: { ativo: false } });
     const res = await api().get('/alertas/estoque-baixo').set('Authorization', ctx.tokenVendedor);
     expect(res.body.map((a: { sku: string }) => a.sku)).toEqual(['AGU-1']);
+  });
+});
+
+describe('Fuso horário da loja (APP_TZ_OFFSET = -03:00)', () => {
+  // 01:30 UTC de 10/03 = 22:30 de 09/03 no horário de Brasília
+  beforeAll(async () => {
+    await prisma.venda.create({
+      data: {
+        usuarioId: ctx.vendedor.id,
+        total: 10,
+        criadoEm: new Date('2026-03-10T01:30:00Z'),
+        itens: { create: [{ produtoId: ctx.refri.id, quantidade: 1, precoUnitario: 10, custoUnitario: 5 }] },
+      },
+    });
+  });
+
+  it('venda feita às 22:30 conta no próprio dia, não no seguinte', async () => {
+    const dia9 = await api().get('/relatorios/resumo?de=2026-03-09&ate=2026-03-09').set('Authorization', ctx.tokenGerente);
+    expect(dia9.body.vendas.quantidade).toBe(1);
+    expect(dia9.body.vendasPorDia).toEqual([{ dia: '2026-03-09', quantidade: 1, total: 10 }]);
+
+    const dia10 = await api().get('/relatorios/resumo?de=2026-03-10&ate=2026-03-10').set('Authorization', ctx.tokenGerente);
+    expect(dia10.body.vendas.quantidade).toBe(0);
+  });
+
+  it('filtro de vendas por data usa o mesmo fuso', async () => {
+    const res = await api().get('/vendas?de=2026-03-09&ate=2026-03-09').set('Authorization', ctx.tokenGerente);
+    expect(res.body.meta.total).toBe(1);
+  });
+
+  it('CSV mostra o horário local da venda', async () => {
+    const res = await api()
+      .get('/relatorios/exportar.csv?tipo=vendas&de=2026-03-09&ate=2026-03-09')
+      .set('Authorization', ctx.tokenGerente);
+    expect(res.text).toContain(';2026-03-09 22:30:00;');
+  });
+});
+
+describe('Proteção contra fórmulas no CSV', () => {
+  it('nome de produto que começa com "=" é exportado como texto', async () => {
+    await prisma.produto.create({
+      data: {
+        sku: 'FORM-1',
+        nome: '=HYPERLINK("http://evil.example","clique")',
+        categoriaId: ctx.bebidas.id,
+        precoCusto: 1,
+        precoVenda: 2,
+        estoqueAtual: 5,
+      },
+    });
+    const res = await api().get('/relatorios/exportar.csv?tipo=estoque').set('Authorization', ctx.tokenGerente);
+    const linha = res.text.split('\r\n').find((l) => l.startsWith('FORM-1;'));
+    expect(linha).toContain(`;"'=HYPERLINK(""http://evil.example"",""clique"")";`);
   });
 });

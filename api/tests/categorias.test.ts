@@ -56,6 +56,13 @@ describe('Categorias', () => {
     expect(res.status).toBe(409);
   });
 
+  it('DELETE recusa categoria com um único produto (409)', async () => {
+    const res = await api().delete(`/categorias/${ctx.limpeza.id}`).set('Authorization', ctx.tokenGerente);
+    expect(res.status).toBe(409);
+    expect(res.body.mensagem).toBe('Categoria possui 1 produto(s) vinculado(s). Mova-os antes de excluir.');
+    expect(await prisma.categoria.findUnique({ where: { id: ctx.limpeza.id } })).not.toBeNull();
+  });
+
   it('DELETE remove categoria vazia', async () => {
     const nova = await prisma.categoria.create({ data: { nome: 'Vazia' } });
     const res = await api().delete(`/categorias/${nova.id}`).set('Authorization', ctx.tokenGerente);

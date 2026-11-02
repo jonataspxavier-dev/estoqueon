@@ -1,24 +1,16 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { money, periodo } from '../utils/http';
+import { env } from '../config/env';
+import { dataHoraLocal, diaLocal, diasEntre, money, periodo } from '../utils/http';
 import { toCsv } from '../utils/csv';
 import { filtroAbaixoMinimo } from './produto.service';
 
 type Num = Prisma.Decimal | bigint | number | null;
 const n = (v: Num) => (v === null ? 0 : Number(v));
 
-function diasEntre(inicio: Date, fim: Date): string[] {
-  const dias: string[] = [];
-  const d = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate()));
-  while (d <= fim && dias.length < 366) {
-    dias.push(d.toISOString().slice(0, 10));
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-  return dias;
-}
-
 export async function resumo(de?: string, ate?: string) {
-  const { inicio, fim } = periodo(de, ate);
+  const p = periodo(de, ate);
+  const { inicio, fim } = p;
 
   const [vendas, lucro, estoque, abaixoMinimo, porDia] = await Promise.all([
     prisma.venda.aggregate({ where: { criadoEm: { gte: inicio, lte: fim } }, _count: true, _sum: { total: true } }),
@@ -34,9 +26,10 @@ export async function resumo(de?: string, ate?: string) {
       FROM produto WHERE ativo = true`,
     prisma.produto.count({ where: { ativo: true, ...filtroAbaixoMinimo } }),
     prisma.$queryRaw<{ dia: Date | string; quantidade: Num; total: Num }[]>`
-      SELECT DATE(criado_em) AS dia, COUNT(*) AS quantidade, SUM(total) AS total
+      SELECT DATE(CONVERT_TZ(criado_em, '+00:00', ${env.APP_TZ_OFFSET})) AS dia,
+             COUNT(*) AS quantidade, SUM(total) AS total
       FROM venda WHERE criado_em BETWEEN ${inicio} AND ${fim}
-      GROUP BY DATE(criado_em) ORDER BY dia`,
+      GROUP BY dia ORDER BY dia`,
   ]);
 
   const faturamento = money(vendas._sum.total);
@@ -48,7 +41,7 @@ export async function resumo(de?: string, ate?: string) {
   );
 
   return {
-    periodo: { de: inicio.toISOString().slice(0, 10), ate: fim.toISOString().slice(0, 10) },
+    periodo: { de: p.de, ate: p.ate },
     vendas: {
       quantidade: vendas._count,
       faturamento,
@@ -65,7 +58,7 @@ export async function resumo(de?: string, ate?: string) {
       valorVenda: money(n(estoque[0].venda)),
       produtosAbaixoMinimo: abaixoMinimo,
     },
-    vendasPorDia: diasEntre(inicio, fim).map((dia) => ({ dia, ...(mapaDias.get(dia) ?? { quantidade: 0, total: 0 }) })),
+    vendasPorDia: diasEntre(p.de, p.ate).map((dia) => ({ dia, ...(mapaDias.get(dia) ?? { quantidade: 0, total: 0 }) })),
   };
 }
 
@@ -116,8 +109,8 @@ export async function estoqueBaixo() {
 const brl = (v: number) => v.toFixed(2).replace('.', ',');
 
 export async function exportarCsv(tipo: 'vendas' | 'mais-vendidos' | 'estoque' | 'movimentacoes', de?: string, ate?: string) {
-  const { inicio, fim } = periodo(de, ate);
-  const sufixo = `${inicio.toISOString().slice(0, 10)}_${fim.toISOString().slice(0, 10)}`;
+  const { inicio, fim, ...dias } = periodo(de, ate);
+  const sufixo = `${dias.de}_${dias.ate}`;
 
   if (tipo === 'vendas') {
     const itens = await prisma.vendaItem.findMany({
@@ -129,7 +122,7 @@ export async function exportarCsv(tipo: 'vendas' | 'mais-vendidos' | 'estoque' |
       ['venda_id', 'data', 'vendedor', 'sku', 'produto', 'quantidade', 'preco_unitario', 'subtotal', 'lucro_bruto'],
       itens.map((i) => [
         i.vendaId,
-        i.venda.criadoEm,
+        dataHoraLocal(i.venda.criadoEm),
         i.venda.usuario.nome,
         i.produto.sku,
         i.produto.nome,
@@ -161,7 +154,7 @@ export async function exportarCsv(tipo: 'vendas' | 'mais-vendidos' | 'estoque' |
       ['id', 'data', 'tipo', 'sku', 'produto', 'quantidade', 'estoque_anterior', 'estoque_posterior', 'motivo', 'usuario'],
       movs.map((m) => [
         m.id,
-        m.criadoEm,
+        dataHoraLocal(m.criadoEm),
         m.tipo,
         m.produto.sku,
         m.produto.nome,
@@ -193,5 +186,5 @@ export async function exportarCsv(tipo: 'vendas' | 'mais-vendidos' | 'estoque' |
       brl(Number(p.precoCusto) * p.estoqueAtual),
     ]),
   );
-  return { nome: `estoque_${new Date().toISOString().slice(0, 10)}.csv`, csv };
+  return { nome: `estoque_${diaLocal()}.csv`, csv };
 }

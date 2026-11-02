@@ -1,8 +1,13 @@
 type Cell = string | number | boolean | Date | null | undefined;
 
+// Textos que o Excel/LibreOffice executariam como fórmula (CSV injection).
+// "-" seguido de dígito é número negativo legítimo e não é alterado.
+const INICIO_DE_FORMULA = /^(?:[=+@\t\r]|-(?!\d))/;
+
 function escape(value: Cell): string {
   if (value === null || value === undefined) return '';
-  const text = value instanceof Date ? value.toISOString() : String(value);
+  let text = value instanceof Date ? value.toISOString() : String(value);
+  if (typeof value === 'string' && INICIO_DE_FORMULA.test(text)) text = `'${text}`;
   return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

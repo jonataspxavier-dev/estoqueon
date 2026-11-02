@@ -15,6 +15,11 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('8h'),
   CORS_ORIGIN: z.string().default('*'),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  // Fuso da loja: define o que é "um dia" nos filtros de data e relatórios
+  APP_TZ_OFFSET: z
+    .string()
+    .regex(/^[+-](0\d|1[0-4]):[0-5]\d$/, 'Use o formato ±HH:MM, ex.: -03:00')
+    .default('-03:00'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

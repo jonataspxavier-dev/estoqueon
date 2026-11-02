@@ -49,6 +49,18 @@ describe('GET /produtos', () => {
     expect(ok.body.data.map((p: { sku: string }) => p.sku)).toEqual(['REF-1']);
   });
 
+  it('estoque exatamente igual ao mínimo já conta como abaixo do mínimo', async () => {
+    await prisma.produto.update({ where: { id: ctx.refri.id }, data: { estoqueAtual: 10, estoqueMinimo: 10 } });
+
+    const baixo = await api().get('/produtos?abaixoMinimo=true').set('Authorization', ctx.tokenVendedor);
+    expect(baixo.body.data.map((p: { sku: string }) => p.sku)).toContain('REF-1');
+
+    const alertas = await api().get('/alertas/estoque-baixo').set('Authorization', ctx.tokenVendedor);
+    expect(alertas.body).toContainEqual(
+      expect.objectContaining({ sku: 'REF-1', estoqueAtual: 10, estoqueMinimo: 10, faltam: 0 }),
+    );
+  });
+
   it('valida parâmetros de consulta', async () => {
     const res = await api().get('/produtos?pageSize=1000&abaixoMinimo=talvez').set('Authorization', ctx.tokenVendedor);
     expect(res.status).toBe(400);

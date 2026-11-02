@@ -1,3 +1,4 @@
+import { diaLocal } from '../src/utils/http';
 import { api, estoqueDe, prepararBanco, prisma, type Contexto } from './helpers';
 
 let ctx: Contexto;
@@ -88,7 +89,7 @@ describe('GET /movimentacoes', () => {
   });
 
   it('filtra por período', async () => {
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = diaLocal();
     const res = await api().get(`/movimentacoes?de=${hoje}&ate=${hoje}`).set('Authorization', ctx.tokenVendedor);
     expect(res.body.meta.total).toBe(3);
     const passado = await api().get('/movimentacoes?de=2020-01-01&ate=2020-01-31').set('Authorization', ctx.tokenVendedor);

@@ -15,7 +15,7 @@ testes automatizados e documentação Swagger.
 | --------- | ------------------------------------------------------------------------------ |
 | Back-end  | Node.js 24, Express 5, TypeScript, Prisma ORM, MySQL 8, Zod, JWT, bcrypt       |
 | Segurança | Helmet, CORS configurável, rate limiting, logs estruturados com pino           |
-| Testes    | Jest + Supertest (77 testes, banco MySQL real)                                  |
+| Testes    | Jest + Supertest (90 testes, banco MySQL real)                                  |
 | Docs      | OpenAPI 3 + Swagger UI em `/docs`                                              |
 | Front-end | React 19, Vite, TypeScript, Tailwind CSS 4, Recharts, React Router              |
 | Infra     | Docker Compose (MySQL + API + painel com Nginx)                                |
@@ -93,8 +93,8 @@ Destaques da suíte:
 - autorização por perfil, validações, paginação, filtros, relatórios e CSV
 
 ```
-Test Suites: 6 passed, 6 total
-Tests:       77 passed, 77 total
+Test Suites: 7 passed, 7 total
+Tests:       90 passed, 90 total
 ```
 
 ## Endpoints
